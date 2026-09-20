@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sarvo Transit</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0b1020;color:#eef2ff}
+header{padding:15px;background:#121a31;position:sticky;top:0;z-index:5;border-bottom:1px solid #26314f}h1{font-size:21px;margin:0 0 4px}.sub{font-size:12px;color:#aab6d3}
+nav{display:flex;gap:6px;overflow:auto;padding:8px;background:#0f162a;position:sticky;top:70px;z-index:4}nav button,.btn{border:1px solid #334263;background:#18233f;color:#eaf0ff;padding:9px 12px;border-radius:9px;white-space:nowrap}nav button.active{background:#3157a6}
+main{max-width:1150px;margin:auto;padding:12px}.page{display:none}.page.active{display:block}.card{background:#121a31;border:1px solid #273554;border-radius:14px;padding:14px;margin:10px 0}h2{font-size:18px;margin:0 0 10px}
+label{font-size:12px;color:#aab6d3;display:block;margin-bottom:5px}input,select{width:100%;padding:10px;border-radius:9px;border:1px solid #354464;background:#0c1325;color:#fff}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:8px;border-bottom:1px solid #263451;text-align:left;white-space:nowrap}th{color:#b9c6e5}.badge{display:inline-block;padding:3px 7px;border-radius:99px;background:#22345d;margin:2px;font-size:11px}.small{font-size:12px;color:#aab6d3}.status{padding:8px;border-radius:9px;background:#10192e;color:#bcd0f5;margin-top:10px}.planet{font-weight:700}.mono{font-family:ui-monospace,SFMono-Regular,monospace}.muted{color:#9aa9c8}.event{background:#0e172b;border:1px solid #263858;border-radius:10px;padding:10px;margin:7px 0}.event b{color:#fff}.pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#20335a;margin:2px}.ok{background:#1d4737}.retro{background:#563d23}.err{color:#ffb5b5}.yes{color:#8ff0bd;font-weight:800}.no{color:#ff9f9f;font-weight:700}.hit{background:#19412f;border-color:#2b7657}.nohit{background:#2a1c25;border-color:#55303c}.dir{font-size:11px;color:#aab6d3}
+#suggestions{position:relative;z-index:9999}.suggestion-item{display:block;width:100%;text-align:left;border:1px solid #ddd;background:#fff;color:#111;padding:11px 12px;cursor:pointer;font-size:14px}.suggestion-empty{padding:10px;background:#fff;border:1px solid #ddd;color:#666}
+@media(max-width:650px){.grid2,.grid3{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>☸ Sarvo Transit</h1><div class="sub">Live Vedic sidereal transit • Lahiri • Nakshatra & Pada entry/exit • exact time & duration</div></header>
+<nav id="nav"></nav><main>
+<section class="page active" id="p1">
+<div class="card"><h2>1. Daily Transit</h2>
+<div class="grid2"><div><label>Date</label><input id="date" type="date"></div><div><label>Time</label><input id="time" type="time" step="1"></div></div>
+<div class="grid3" style="margin-top:10px"><div><label>Timezone</label><input id="tz" value="Asia/Kolkata"></div><div><label>Place (optional)</label><input id="place" placeholder="Jodhpur / Delhi etc."><div id="suggestions"></div></div><div><label>Planet</label><select id="dailyPlanet"><option value="all">All 9 Graha</option></select></div></div>
+<div style="margin-top:10px"><button class="btn" id="dailyBtn">🔄 Calculate Today's Transit</button> <button class="btn" id="gps">📍 GPS</button></div><div id="status" class="status">Date select karke Calculate dabayein. API se live Swiss Ephemeris positions li jayengi.</div></div>
+<div class="card" id="current"></div><div class="card tablewrap" id="daily"></div>
+<div class="card" id="vedhaPanel"><h2>Planet-to-Planet Vedha • Rashi • D1 Drishti</h2><div class="small">Yahan har graha ke current Sarvatobhadra Vedha targets check honge. Moon/Sun/Rahu/Ketu ke 3on Vedha directions active hain. Target planet ka exact Nakshatra + Pada bhi dikhaya jayega.</div><div id="vedhaSummary" style="margin-top:10px"></div></div>
+</section>
+
+<section class="page" id="p2">
+<div class="card"><h2>2. Monthly Transit</h2><div class="grid2"><div><label>Month</label><input id="month" type="month"></div><div><label>Show</label><select id="monthType"><option value="pada">Pada + Nakshatra</option><option value="nak">Nakshatra only</option></select></div></div><div style="margin-top:10px"><button class="btn" id="monthBtn">📅 Generate Monthly Transit</button></div><div id="monthStatus" class="status">Monthly calculation on-demand hai.</div></div>
+<div class="card tablewrap" id="monthly"></div>
+<div class="card tablewrap" id="monthlyVedha"><h2>Monthly Planet-to-Planet Vedha Hits</h2><div class="small">Month ke selected period me 6-hour checkpoints par active Vedha/Rashi/D1 relations scan kiye jaate hain.</div></div>
+</section>
+
+<section class="page" id="p3">
+<div class="card"><h2>3. Find Transit</h2>
+<div class="grid3"><div><label>Planet</label><select id="findPlanet"></select></div><div><label>Transit type</label><select id="findType"><option value="pada">Pada</option><option value="nak">Nakshatra</option></select></div><div><label>Nakshatra</label><select id="findNak"></select></div></div>
+<div class="grid3" style="margin-top:10px"><div><label>Pada</label><select id="findPada"><option value="all">All Padas</option><option value="1">Pada 1</option><option value="2">Pada 2</option><option value="3">Pada 3</option><option value="4">Pada 4</option></select></div><div><label>From</label><input id="findFrom" type="date"></div><div><label>To</label><input id="findTo" type="date"></div></div>
+<div style="margin-top:10px"><button class="btn" id="findBtn">🔎 Find Transit</button></div><div id="findStatus" class="status">Example: Moon → Rohini → Pada 2, ya Saturn → Shatabhisha.</div></div>
+<div class="card"><h2>Planet-to-Planet Relation Search</h2>
+<div class="grid3"><div><label>From Planet</label><select id="relFrom"></select></div><div><label>To Planet</label><select id="relTo"></select></div><div><label>Relation</label><select id="relType"><option value="vedha">Sarvatobhadra Vedha</option><option value="rashi">Same Rashi</option><option value="d1">D1 Drishti</option><option value="any">Any of the above</option></select></div></div>
+<div class="grid2" style="margin-top:10px"><div><label>From Date</label><input id="relFromDate" type="date"></div><div><label>To Date</label><input id="relToDate" type="date"></div></div>
+<div style="margin-top:10px"><button class="btn" id="relBtn">🔎 Find Planet Relation</button></div><div id="relStatus" class="status">Example: Moon → Venus. Moon ki 3 Vedha me Venus hai ya nahi, same Rashi hai ya nahi, aur D1 drishti hai ya nahi.</div></div>
+<div class="card tablewrap" id="findResult"></div><div class="card tablewrap" id="relResult"></div>
+</section>
+</main>
+<script>
+const API="https://swiss-ephemeris-api-2m5g.onrender.com/v1/chart";
+const planets=[['Sun','sun'],['Moon','moon'],['Mars','mars'],['Mercury','mercury'],['Jupiter','jupiter'],['Venus','venus'],['Saturn','saturn'],['Rahu','mean_node'],['Ketu','ketu']];
+const naks=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
+const signs=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+const NAK=360/27, PADA=360/108;
+let cache=new Map();
+const $=id=>document.getElementById(id);
+function pad2(n){return String(n).padStart(2,'0')}
+function localISO(d){let y=d.getFullYear(),m=pad2(d.getMonth()+1),day=pad2(d.getDate()),h=pad2(d.getHours()),mi=pad2(d.getMinutes()),s=pad2(d.getSeconds());return `${y}-${m}-${day}T${h}:${mi}:${s}`}
+function dateObj(date,time='00:00:00'){return new Date(`${date}T${time}`)}
+function fmtDate(d){return d.toLocaleString('en-IN',{timeZone:'Asia/Kolkata',year:'numeric',month:'short',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
+function seg(lon,type){lon=((lon%360)+360)%360;return type==='nak'?Math.floor(lon/NAK):Math.floor(lon/PADA)}
+function np(lon){lon=((lon%360)+360)%360;let ni=Math.floor(lon/NAK), rem=lon-ni*NAK, pi=Math.floor(rem/PADA)+1;return {nak:naks[ni],nakIndex:ni,pada:pi,padaIndex:ni*4+pi-1,deg:lon,sign:signs[Math.floor(lon/30)],inSign:lon%30}}
+function dms(x){let d=Math.floor(x),m=Math.floor((x-d)*60),s=Math.round((((x-d)*60)-m)*60);if(s===60){s=0;m++}if(m===60){m=0;d++}return `${pad2(d)}°${pad2(m)}'${pad2(s)}"`}
+function duration(ms){let sec=Math.round(ms/1000),d=Math.floor(sec/86400);sec%=86400;let h=Math.floor(sec/3600);sec%=3600;let m=Math.floor(sec/60);return `${d?d+'d ':''}${h?h+'h ':''}${m}m`}
+function bodyParam(){return planets.filter(x=>x[1]!=='ketu').map(x=>x[1]).join(',')}
+async function chartAt(d){
+ const key=d.getTime();if(cache.has(key))return cache.get(key);
+ const u=new URL(API);u.searchParams.set('datetime',localISO(d));u.searchParams.set('tz',$('tz').value||'Asia/Kolkata');u.searchParams.set('ayanamsha','lahiri');u.searchParams.set('bodies',bodyParam());
+ const r=await fetch(u,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error('Swiss Ephemeris API HTTP '+r.status);const data=await r.json();cache.set(key,data);return data;
+}
+function bodyLon(data,key){let b=(data.bodies||[]).find(x=>x.key===key||x.name===key);if(!b)return null;let x=b.sidereal&&b.sidereal.longitude; if(x==null)x=b.sidereal_longitude;return Number(x)}
+async function positions(d){let data=await chartAt(d),out=[];for(const [name,key] of planets){let lon=key==='ketu'?null:bodyLon(data,key);if(key==='ketu'){let rahu=bodyLon(data,'mean_node');lon=rahu==null?null:(rahu+180)%360}if(lon==null)continue;let p=np(lon);let raw=(data.bodies||[]).find(x=>x.key===key||x.name===key);out.push({name,key,lon,p,retro:!!(raw&&raw.retrograde),speed:Number(raw&&((raw.sidereal||{}).longitude_speed??raw.longitude_speed)||0)})}return out}
+function renderCurrent(bs,d){$('current').innerHTML='<h2>Current position</h2><div class="tablewrap"><table><thead><tr><th>Planet</th><th>Sidereal</th><th>Nakshatra</th><th>Pada</th><th>Motion</th></tr></thead><tbody>'+bs.map(b=>`<tr><td class="planet">${b.name}</td><td>${b.p.sign} ${dms(b.p.inSign)}</td><td>${b.p.nak}</td><td>${b.p.pada}</td><td>${b.retro?'↩ Retrograde':'→ Direct'} <span class="muted">${Math.abs(b.speed).toFixed(3)}°/day</span></td></tr>`).join('')+'</tbody></table></div><div class="small" style="margin-top:8px">Time: ${fmtDate(d)} IST • Lahiri sidereal</div>'}
+function eventHtml(e){return `<div class="event"><span class="pill">${e.planet}</span><b>${e.type==='pada'?'Pada':'Nakshatra'} entry</b><br>${e.fromName} → <b>${e.toName}</b><br><span class="small">Start: ${fmtDate(e.start)} IST • Next boundary: ${fmtDate(e.end)} IST • Duration: ${duration(e.end-e.start)}</span></div>`}
+
+async function refineCross(a,b,planet,type){
+ const pa=a.p[planet], pb=b.p[planet]; if(!pa||!pb)return null; const sa=seg(pa.lon,type), sb=seg(pb.lon,type);if(sa===sb)return null;
+ let lo=a.time,hi=b.time;for(let i=0;i<12;i++){let mid=new Date((lo.getTime()+hi.getTime())/2),m=await positions(mid),idx=m.findIndex(x=>x.name===planet);if(idx<0)break;let sm=seg(m[idx].lon,type);if(sm===sa)lo=mid;else hi=mid}return new Date((lo.getTime()+hi.getTime())/2)
+}
+async function scanEvents(start,end,type,filterPlanet='all'){
+ const step=6*3600*1000;let times=[];for(let t=start.getTime();t<=end.getTime()+1;t+=step)times.push(new Date(Math.min(t,end.getTime())));if(times[times.length-1].getTime()!==end.getTime())times.push(end);
+ let samples=[];for(let i=0;i<times.length;i++){ $('status').textContent=`Calculating ${i+1}/${times.length} • ${times[i].toLocaleString()}`;samples.push({time:times[i],bs:await positions(times[i])}) }
+ let events=[];for(let i=0;i<samples.length-1;i++){let a=samples[i],b=samples[i+1];for(const p of planets.map(x=>x[0])){if(filterPlanet!=='all'&&filterPlanet!==p)continue;let pa=a.bs.find(x=>x.name===p),pb=b.bs.find(x=>x.name===p);if(!pa||!pb)continue;let sa=seg(pa.lon,type),sb=seg(pb.lon,type);if(sa===sb)continue;let diff=Math.abs(sb-sa);if(diff>2&&diff<100)continue;let cross=await refineCross(a,b,p,type);if(!cross)continue;let at=await positions(cross),cur=at.find(x=>x.name===p);if(!cur)continue;let target=type==='nak'?cur.p.nak:cur.p.nak+' • Pada '+cur.p.pada;let fromIdx=sa,toIdx=sb;events.push({planet:p,type,start:cross,fromName:type==='nak'?naks[sa]:naks[Math.floor(sa/4)]+' • Pada '+(sa%4+1),toName:target,fromIdx,toIdx})}}
+ events.sort((x,y)=>x.start-y.start);return events;
+}
+async function daily(){try{$('status').textContent='Live calculation starting…';let d=dateObj($('date').value,$('time').value||'00:00:00');let bs=await positions(d);renderCurrent(bs,d);let end=new Date(d.getTime()+24*3600*1000);let ev=await scanEvents(d,end,'pada',$('dailyPlanet').value);$('daily').innerHTML='<h2>Today: Pada transitions</h2>'+ (ev.length?ev.map(eventHtml).join(''):'<div class="small">Is 24-hour window me koi pada boundary nahi mili.</div>');renderVedhaPanel(bs,d);$('status').textContent='Complete. Live Swiss Ephemeris data.'}catch(e){$('status').innerHTML='<span class="err">Error: '+e.message+'</span>'}}
+async function monthly(){try{$('monthStatus').textContent='Monthly calculation starting…';cache.clear();let [y,m]=($('month').value||'2026-09').split('-').map(Number),start=new Date(y,m-1,1,0,0,0),end=new Date(y,m,1,0,0,0);let type=$('monthType').value;let ev=await scanEvents(start,end,type,'all');let rows=ev.map(e=>`<tr><td>${fmtDate(e.start)} IST</td><td class="planet">${e.planet}</td><td>${e.fromName}</td><td><b>${e.toName}</b></td><td>${e.retro?'Retro':''}</td></tr>`).join('');$('monthly').innerHTML='<h2>'+start.toLocaleString('en-IN',{month:'long',year:'numeric'})+'</h2><table><thead><tr><th>Date/Time</th><th>Planet</th><th>From</th><th>To</th><th>Note</th></tr></thead><tbody>'+rows+'</tbody></table><div class="small" style="margin-top:8px">Exact boundary is refined from Swiss Ephemeris positions. Duration is best read by the next entry of the same planet/segment.</div>';const rel=await scanRelationCheckpoints(start,end,'all','all','any',$('monthStatus')); const rr=rel.slice(0,250).map(x=>`<tr><td>${fmtDate(x.time)} IST</td><td>${x.a.name}</td><td>${x.a.p.nak} P${x.a.p.pada}</td><td>${x.b.name}</td><td>${x.b.p.nak} P${x.b.p.pada}</td><td>${yn(x.r.aVedha)} / ${yn(x.r.bVedha)}</td><td>${yn(x.r.sameRashi)}</td><td>${yn(x.r.aD1)} / ${yn(x.r.bD1)}</td></tr>`).join(''); $('monthlyVedha').innerHTML=`<h2>Monthly Planet-to-Planet Vedha Hits</h2><div class="small">6-hour checkpoints • ${rel.length} relation snapshots (first 250 shown)</div><table><thead><tr><th>Time</th><th>Planet A</th><th>A position</th><th>Planet B</th><th>B position</th><th>Vedha A→B / B→A</th><th>Same Rashi</th><th>D1 A→B / B→A</th></tr></thead><tbody>${rr||'<tr><td colspan="8">No active relation found in checkpoints.</td></tr>'}</tbody></table>`; $('monthStatus').textContent=`Complete: ${ev.length} transitions + ${rel.length} relation snapshots.`}catch(e){$('monthStatus').innerHTML='<span class="err">Error: '+e.message+'</span>'}}
+
+const normalSpeedDeg={Jupiter:5/60,Venus:(59+8/60)/60,Saturn:2/60,Mars:(31+26/60)/60,Mercury:(59+8/60)/60};
+const d1AspectHouses={Sun:[7],Moon:[7],Mars:[4,7,8],Mercury:[7],Jupiter:[5,7,9],Venus:[7],Saturn:[3,7,10],Rahu:[5,7,9],Ketu:[5,7,9]};
+function vedhaDirection(b){
+  if(['Sun','Moon','Rahu','Ketu'].includes(b.name)) return 'ALL';
+  if(b.retro) return 'RIGHT';
+  const n=normalSpeedDeg[b.name];
+  if(n!=null && Math.abs(b.speed)>n*1.02) return 'LEFT';
+  return 'FRONT';
+}
+function raysByDirection(name,direction){
+  const p=pos[name]; if(!p) return [];
+  const [r,c]=p, out=new Set();
+  const add=(rr,cc)=>{if(rr>=0&&rr<9&&cc>=0&&cc<9&&!(rr===r&&cc===c))out.add(G[rr][cc]);};
+  const addLine=(dr,dc)=>{for(let k=1;k<9;k++)add(r+dr*k,c+dc*k)};
+  let straight, d1, d2;
+  if(c===0){straight=[0,1];d1=[-1,1];d2=[1,1]}
+  else if(c===8){straight=[0,-1];d1=[-1,-1];d2=[1,-1]}
+  else if(r===0){straight=[1,0];d1=[1,-1];d2=[1,1]}
+  else if(r===8){straight=[-1,0];d1=[-1,-1];d2=[-1,1]}
+  else return [];
+  if(direction==='ALL'||direction==='FRONT')addLine(...straight);
+  if(direction==='ALL'||direction==='LEFT')addLine(...d1);
+  if(direction==='ALL'||direction==='RIGHT')addLine(...d2);
+  return [...out].filter(x=>gridNakNames.has(x));
+}
+function vedhaTargets(b){return raysByDirection(b.nak,vedhaDirection(b));}
+function signIndex(p){return signs.indexOf(p.p.sign)}
+function houseFromTo(a,b){let d=(signIndex(b)-signIndex(a)+12)%12;return d+1}
+function d1Aspects(a,b){const h=houseFromTo(a,b);return (d1AspectHouses[a.name]||[7]).includes(h)}
+function relation(a,b){
+ const aTargets=vedhaTargets(a), bTargets=vedhaTargets(b);
+ const aVedha=aTargets.includes(b.nak), bVedha=bTargets.includes(a.nak);
+ const sameRashi=a.p.sign===b.p.sign;
+ const aD1=d1Aspects(a,b), bD1=d1Aspects(b,a);
+ return {aVedha,bVedha,mutualVedha:aVedha&&bVedha,sameRashi,aD1,bD1,mutualD1:aD1&&bD1,houseAB:houseFromTo(a,b),houseBA:houseFromTo(b,a),dirA:vedhaDirection(a),dirB:vedhaDirection(b),targetsA:aTargets,targetsB:bTargets};
+}
+function yn(v){return v?'<span class="yes">YES</span>':'<span class="no">NO</span>'}
+function relationRow(a,b){const r=relation(a,b);return `<tr><td class="planet">${a.name}</td><td>${a.p.nak} • P${a.p.pada}<br><span class="dir">${r.dirA==='ALL'?'3 Vedha':r.dirA}</span></td><td class="planet">${b.name}</td><td>${b.p.nak} • P${b.p.pada}</td><td>${yn(r.aVedha)}</td><td>${yn(r.bVedha)}</td><td>${yn(r.mutualVedha)}</td><td>${yn(r.sameRashi)}</td><td>${yn(r.aD1)} / ${yn(r.bD1)}</td><td>${r.houseAB}/${r.houseBA}</td></tr>`}
+function renderVedhaPanel(bs,d){
+ let rows='';
+ for(let i=0;i<bs.length;i++)for(let j=i+1;j<bs.length;j++)rows+=relationRow(bs[i],bs[j]);
+ const moon=bs.find(x=>x.name==='Moon');
+ let moonBox='';
+ if(moon){const hits=bs.filter(x=>x.name!=='Moon'&&vedhaTargets(moon).includes(x.p.nak));moonBox=`<div class="status"><b>Moon ke 3 Vedha:</b> ${vedhaTargets(moon).join(' • ')||'—'}<br>${hits.length?hits.map(x=>`<span class="badge hit">Moon → ${x.name}: YES • ${x.p.nak} • Pada ${x.p.pada}</span>`).join(' '):'<span class="no">Moon ke 3 Vedha me koi current planet nahi.</span>'}</div>`}
+ $('vedhaSummary').innerHTML=moonBox+`<div class="tablewrap" style="margin-top:10px"><table><thead><tr><th>From</th><th>From Position</th><th>To</th><th>To Position</th><th>From→To Vedha</th><th>To→From Vedha</th><th>Mutual Vedha</th><th>Same Rashi</th><th>D1 Drishti A→B / B→A</th><th>House distance</th></tr></thead><tbody>${rows}</tbody></table></div><div class="small" style="margin-top:8px">D1 drishti: Sun/Moon/Mercury/Venus = 7th; Mars = 4/7/8; Jupiter = 5/7/9; Saturn = 3/7/10; Rahu/Ketu = 5/7/9. Rahu/Ketu aspects are school-dependent, so app labels them as a Parashari-style option.</div>`;
+}
+function activeRelationKeys(bs){
+ const out=[];for(let i=0;i<bs.length;i++)for(let j=i+1;j<bs.length;j++){const a=bs[i],b=bs[j],r=relation(a,b);if(r.aVedha||r.bVedha||r.sameRashi||r.aD1||r.bD1)out.push({a,b,r})}return out;
+}
+async function scanRelationCheckpoints(start,end,filterA='all',filterB='all',relFilter='any',progressEl=null){
+ const step=6*3600*1000, samples=[];
+ for(let t=start.getTime();t<=end.getTime();t+=step){const d=new Date(Math.min(t,end.getTime()));if(progressEl)progressEl.textContent=`Relation scan ${samples.length+1} • ${d.toLocaleString()}`;samples.push({time:d,bs:await positions(d)});if(d.getTime()===end.getTime())break}
+ if(!samples.length||samples[samples.length-1].time.getTime()!==end.getTime())samples.push({time:end,bs:await positions(end)});
+ const hits=[];for(const s of samples){for(const x of activeRelationKeys(s.bs)){let a=x.a,b=x.b;if(filterA!=='all'&&a.name!==filterA&&b.name!==filterA)continue;if(filterB!=='all'&&a.name!==filterB&&b.name!==filterB)continue;let ok=relFilter==='any'?(x.r.aVedha||x.r.bVedha||x.r.sameRashi||x.r.aD1||x.r.bD1):relFilter==='vedha'?(x.r.aVedha||x.r.bVedha):relFilter==='rashi'?x.r.sameRashi:(x.r.aD1||x.r.bD1);if(ok)hits.push({...x,time:s.time})}}
+ return hits;
+}
+function inTarget(p,typ,nakName,pada){return typ==='nak'?p.nak===nakName:(p.nak===nakName&&(pada==='all'||p.pada===Number(pada)))}
+async function findTransit(){try{$('findStatus').textContent='Searching live transit boundaries…';cache.clear();let start=dateObj($('findFrom').value,'00:00:00'),end=dateObj($('findTo').value,'23:59:59'),typ=$('findType').value,planet=$('findPlanet').value,nakName=$('findNak').value,pada=$('findPada').value;let ev=await scanEvents(start,end,typ,planet);let matches=[];for(let i=0;i<ev.length;i++){let e=ev[i];if(e.planet!==planet)continue;let after=await positions(new Date(e.start.getTime()+2000));let p=after.find(x=>x.name===planet);if(p&&inTarget(p,typ,nakName,pada)){let next=ev.find((x,j)=>j>i&&x.planet===planet);matches.push({...e,end:next?next.start:end})}}let rows=matches.map(e=>`<tr><td>${fmtDate(e.start)} IST</td><td>${fmtDate(e.end)} IST</td><td>${duration(e.end-e.start)}</td><td>${e.toName}</td><td>${e.planet}</td></tr>`).join('');$('findResult').innerHTML='<h2>Found '+matches.length+' transit(s)</h2><table><thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Transit</th><th>Planet</th></tr></thead><tbody>'+rows+'</tbody></table>';$('findStatus').textContent='Search complete.'}catch(e){$('findStatus').innerHTML='<span class="err">Error: '+e.message+'</span>'}}
+function setup(){let now=new Date();$('date').value=`${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;$('time').value=`${pad2(now.getHours())}:${pad2(now.getMinutes())}:00`;$('month').value=`${now.getFullYear()}-${pad2(now.getMonth()+1)}`;$('findFrom').value=$('date').value;$('relFromDate').value=$('date').value;$('relToDate').value=$('findTo')?.value||$('date').value;let t=new Date(now);t.setMonth(t.getMonth()+1);$('findTo').value=`${t.getFullYear()}-${pad2(t.getMonth()+1)}-${pad2(t.getDate())}`;$('relToDate').value=$('findTo').value;
+ for(const [name] of planets){$('dailyPlanet').innerHTML+=`<option value="${name}">${name}</option>`;$('findPlanet').innerHTML+=`<option value="${name}">${name}</option>`}for(const n of naks)$('findNak').innerHTML+=`<option>${n}</option>`; for(const [name] of planets){$('relFrom').innerHTML+=`<option value="${name}">${name}</option>`;$('relTo').innerHTML+=`<option value="${name}">${name}</option>`;} $('relFrom').value='Moon'; $('relTo').value='Venus';
+ $('dailyBtn').onclick=daily;$('monthBtn').onclick=monthly;$('findBtn').onclick=findTransit;$('relBtn').onclick=async()=>{try{$('relStatus').textContent='Searching planet relation…';cache.clear();let st=dateObj($('relFromDate').value,'00:00:00'),en=dateObj($('relToDate').value,'23:59:59');let hits=await scanRelationCheckpoints(st,en,$('relFrom').value,$('relTo').value,$('relType').value,$('relStatus'));let rows=hits.slice(0,500).map(x=>`<tr><td>${fmtDate(x.time)} IST</td><td>${x.a.name}</td><td>${x.a.p.sign} • ${x.a.p.nak} P${x.a.p.pada}</td><td>${x.b.name}</td><td>${x.b.p.sign} • ${x.b.p.nak} P${x.b.pada}</td><td>${yn(x.r.aVedha)} / ${yn(x.r.bVedha)}</td><td>${yn(x.r.mutualVedha)}</td><td>${yn(x.r.sameRashi)}</td><td>${yn(x.r.aD1)} / ${yn(x.r.bD1)}</td></tr>`).join('');$('relResult').innerHTML=`<h2>Relation results: ${hits.length}</h2><table><thead><tr><th>Time</th><th>From</th><th>From position</th><th>To</th><th>To position</th><th>Vedha A→B / B→A</th><th>Mutual Vedha</th><th>Same Rashi</th><th>D1 A→B / B→A</th></tr></thead><tbody>${rows||'<tr><td colspan="9">No relation found.</td></tr>'}</tbody></table>`;$('relStatus').textContent='Search complete.'}catch(e){$('relStatus').innerHTML='<span class="err">Error: '+e.message+'</span>'}};$('findType').onchange=()=>{$('findPada').disabled=$('findType').value==='nak'};
+ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));$('p'+b.dataset.p).classList.add('active')});
+}
+function nav(){let labels=['1 Daily','2 Monthly','3 Find Transit'];$('nav').innerHTML=labels.map((x,i)=>`<button data-p="${i+1}" class="${i===0?'active':''}">${x}</button>`).join('')}
+nav();setup();
+</script></body></html>
