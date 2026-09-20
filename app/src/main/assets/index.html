@@ -49,6 +49,21 @@ const planets=[['Sun','sun'],['Moon','moon'],['Mars','mars'],['Mercury','mercury
 const naks=['Ashwini','Bharani','Krittika','Rohini','Mrigashira','Ardra','Punarvasu','Pushya','Ashlesha','Magha','Purva Phalguni','Uttara Phalguni','Hasta','Chitra','Swati','Vishakha','Anuradha','Jyeshtha','Mula','Purva Ashadha','Uttara Ashadha','Shravana','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati'];
 const signs=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
 const NAK=360/27, PADA=360/108;
+// Classical 9x9 Sarvatobhadra Chakra layout used for Vedha ray calculation.
+const G=[
+ ['ई','Dhanishtha','Shatabhisha','Purva Bhadrapada','Uttara Bhadrapada','Revati','Ashwini','Bharani','अ'],
+ ['Shravana','ऋ','ग','स','द','च','ल','उ','Krittika'],
+ ['Abhijit','ख','ऐ','Aquarius','Pisces','Aries','लृ','अ','Rohini'],
+ ['Uttara Ashadha','ज','Capricorn','अः','Friday','ओ','Taurus','व','Mrigashira'],
+ ['Purva Ashadha','भ','Sagittarius','Thursday','Saturday','Sunday / Tuesday','Gemini','क','Ardra'],
+ ['Mula','य','Scorpio','अं','Monday / Wednesday','औ','Cancer','ह','Punarvasu'],
+ ['Jyeshtha','न','ए','Libra','Virgo','Leo','लृ','ड','Pushya'],
+ ['Anuradha','ऋ','त','र','प','ट','म','ऊ','Ashlesha'],
+ ['इ','Vishakha','Swati','Chitra','Hasta','Uttara Phalguni','Purva Phalguni','Magha','आ']
+];
+const pos={};
+for(let r=0;r<9;r++)for(let c=0;c<9;c++){const v=G[r][c];if(naks.includes(v))pos[v]=[r,c]}
+const gridNakNames=new Set(naks);
 let cache=new Map();
 const $=id=>document.getElementById(id);
 function pad2(n){return String(n).padStart(2,'0')}
