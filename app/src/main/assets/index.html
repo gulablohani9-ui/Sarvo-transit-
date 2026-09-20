@@ -61,8 +61,8 @@ const G=[
  ['Anuradha','ऋ','त','र','प','ट','म','ऊ','Ashlesha'],
  ['इ','Vishakha','Swati','Chitra','Hasta','Uttara Phalguni','Purva Phalguni','Magha','आ']
 ];
-const pos={};
-for(let r=0;r<9;r++)for(let c=0;c<9;c++){const v=G[r][c];if(naks.includes(v))pos[v]=[r,c]}
+const SB_NAK_POS={};
+for(let r=0;r<9;r++)for(let c=0;c<9;c++){const v=G[r][c];if(naks.includes(v))SB_NAK_POS[v]=[r,c]}
 const gridNakNames=new Set(naks);
 let cache=new Map();
 const $=id=>document.getElementById(id);
@@ -98,19 +98,19 @@ async function scanEvents(start,end,type,filterPlanet='all'){
 async function daily(){try{$('status').textContent='Live calculation starting…';let d=dateObj($('date').value,$('time').value||'00:00:00');let bs=await positions(d);renderCurrent(bs,d);let end=new Date(d.getTime()+24*3600*1000);let ev=await scanEvents(d,end,'pada',$('dailyPlanet').value);$('daily').innerHTML='<h2>Today: Pada transitions</h2>'+ (ev.length?ev.map(eventHtml).join(''):'<div class="small">Is 24-hour window me koi pada boundary nahi mili.</div>');renderVedhaPanel(bs,d);$('status').textContent='Complete. Live Swiss Ephemeris data.'}catch(e){$('status').innerHTML='<span class="err">Error: '+e.message+'</span>'}}
 async function monthly(){try{$('monthStatus').textContent='Monthly calculation starting…';cache.clear();let [y,m]=($('month').value||'2026-09').split('-').map(Number),start=new Date(y,m-1,1,0,0,0),end=new Date(y,m,1,0,0,0);let type=$('monthType').value;let ev=await scanEvents(start,end,type,'all');let rows=ev.map(e=>`<tr><td>${fmtDate(e.start)} IST</td><td class="planet">${e.planet}</td><td>${e.fromName}</td><td><b>${e.toName}</b></td><td>${e.retro?'Retro':''}</td></tr>`).join('');$('monthly').innerHTML='<h2>'+start.toLocaleString('en-IN',{month:'long',year:'numeric'})+'</h2><table><thead><tr><th>Date/Time</th><th>Planet</th><th>From</th><th>To</th><th>Note</th></tr></thead><tbody>'+rows+'</tbody></table><div class="small" style="margin-top:8px">Exact boundary is refined from Swiss Ephemeris positions. Duration is best read by the next entry of the same planet/segment.</div>';const rel=await scanRelationCheckpoints(start,end,'all','all','any',$('monthStatus')); const rr=rel.slice(0,250).map(x=>`<tr><td>${fmtDate(x.time)} IST</td><td>${x.a.name}</td><td>${x.a.p.nak} P${x.a.p.pada}</td><td>${x.b.name}</td><td>${x.b.p.nak} P${x.b.p.pada}</td><td>${yn(x.r.aVedha)} / ${yn(x.r.bVedha)}</td><td>${yn(x.r.sameRashi)}</td><td>${yn(x.r.aD1)} / ${yn(x.r.bD1)}</td></tr>`).join(''); $('monthlyVedha').innerHTML=`<h2>Monthly Planet-to-Planet Vedha Hits</h2><div class="small">6-hour checkpoints • ${rel.length} relation snapshots (first 250 shown)</div><table><thead><tr><th>Time</th><th>Planet A</th><th>A position</th><th>Planet B</th><th>B position</th><th>Vedha A→B / B→A</th><th>Same Rashi</th><th>D1 A→B / B→A</th></tr></thead><tbody>${rr||'<tr><td colspan="8">No active relation found in checkpoints.</td></tr>'}</tbody></table>`; $('monthStatus').textContent=`Complete: ${ev.length} transitions + ${rel.length} relation snapshots.`}catch(e){$('monthStatus').innerHTML='<span class="err">Error: '+e.message+'</span>'}}
 
-const normalSpeedDeg={Jupiter:5/60,Venus:(59+8/60)/60,Saturn:2/60,Mars:(31+26/60)/60,Mercury:(59+8/60)/60};
-const d1AspectHouses={Sun:[7],Moon:[7],Mars:[4,7,8],Mercury:[7],Jupiter:[5,7,9],Venus:[7],Saturn:[3,7,10],Rahu:[5,7,9],Ketu:[5,7,9]};
+const SB_NORMAL_SPEED={Jupiter:5/60,Venus:(59+8/60)/60,Saturn:2/60,Mars:(31+26/60)/60,Mercury:(59+8/60)/60};
+const SB_D1_ASPECT_HOUSES={Sun:[7],Moon:[7],Mars:[4,7,8],Mercury:[7],Jupiter:[5,7,9],Venus:[7],Saturn:[3,7,10],Rahu:[5,7,9],Ketu:[5,7,9]};
 function vedhaDirection(b){
   if(['Sun','Moon','Rahu','Ketu'].includes(b.name)) return 'ALL';
   if(b.retro) return 'RIGHT';
-  const n=normalSpeedDeg[b.name];
+  const n=SB_NORMAL_SPEED[b.name];
   if(n!=null && Math.abs(b.speed)>n*1.02) return 'LEFT';
   return 'FRONT';
 }
 function raysByDirection(name,direction){
-  const p=pos[name]; if(!p) return [];
+  const p=SB_NAK_POS[name]; if(!p || !Array.isArray(p)) return [];
   const [r,c]=p, out=new Set();
-  const add=(rr,cc)=>{if(rr>=0&&rr<9&&cc>=0&&cc<9&&!(rr===r&&cc===c))out.add(G[rr][cc]);};
+  const add=(rr,cc)=>{if(rr>=0&&rr<9&&cc>=0&&cc<9&&!(rr===r&&cc===c)&&G[rr]&&G[rr][cc])out.add(G[rr][cc]);};
   const addLine=(dr,dc)=>{for(let k=1;k<9;k++)add(r+dr*k,c+dc*k)};
   let straight, d1, d2;
   if(c===0){straight=[0,1];d1=[-1,1];d2=[1,1]}
@@ -126,8 +126,9 @@ function raysByDirection(name,direction){
 function vedhaTargets(b){return raysByDirection(b.nak,vedhaDirection(b));}
 function signIndex(p){return signs.indexOf(p.p.sign)}
 function houseFromTo(a,b){let d=(signIndex(b)-signIndex(a)+12)%12;return d+1}
-function d1Aspects(a,b){const h=houseFromTo(a,b);return (d1AspectHouses[a.name]||[7]).includes(h)}
+function d1Aspects(a,b){const h=houseFromTo(a,b);return (SB_D1_ASPECT_HOUSES[a.name]||[7]).includes(h)}
 function relation(a,b){
+ if(!a||!b||!a.p||!b.p) return {aVedha:false,bVedha:false,mutualVedha:false,sameRashi:false,aD1:false,bD1:false,mutualD1:false,houseAB:null,houseBA:null,dirA:'',dirB:'',targetsA:[],targetsB:[]};
  const aTargets=vedhaTargets(a), bTargets=vedhaTargets(b);
  const aVedha=aTargets.includes(b.nak), bVedha=bTargets.includes(a.nak);
  const sameRashi=a.p.sign===b.p.sign;
